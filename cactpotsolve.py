@@ -9,9 +9,8 @@ import math
 import itertools
 import tkinter
 
-#TODO - visually show which line choice is best
-#TODO - print errors to the GUI
-#TODO - add reset button functionality
+#TODO - make GUI messages prettier
+#TODO - restructure code with classes?
 #TODO - compartmentalize functions more?
 #TODO - custom number_pool in initialize() - error if number pool is too small for grid
 #TODO - add numbers_repeat boolean to initialize(); would need to change number_pool to not
@@ -28,23 +27,32 @@ import tkinter
 ##payout_dict = a dictionary containing the payout for each score
 def initialize(rows,columns,number_to_scratch,payout_dict):
 
-    #Create table GUI
     master = tkinter.Tk()
-    
-    entry_boxes = [create_entry_box(master,box_number) for box_number in range(0,rows*columns)]
+    #Create text message displays
+    error_message = tkinter.StringVar()
+    error_display = tkinter.Label(master, textvariable=error_message)
+    error_display.grid(row=rows+1,column=columns)
 
+    payout_message = tkinter.StringVar()
+    payout_display = tkinter.Label(master, textvariable=payout_message)
+    payout_display.grid(row=0,column=columns)
+
+    #Create scratchcard grid
+    entry_boxes = [create_entry_box(master,box_number) for box_number in range(0,rows*columns)]
+    
     for box_number in range(len(entry_boxes)):
         entry_boxes[box_number].grid(row=math.floor(box_number/columns),column=box_number%columns)
-        
-    correct_cells = []
+    #Create buttons    
     tkinter.Button(master, text="Go!",
-                   command=lambda : scratchcard_solve(entry_boxes,rows,columns,
+                   command=lambda : scratchcard_solve(payout_message,error_message,
+                                                      entry_boxes,rows,columns,
                                                       number_to_scratch,payout_dict)
                    ).grid(row=rows+1,column=columns-1)
 
-    for cell in correct_cells:
-        entry_boxes[cell].config({"background":"#00FF00"})
-    
+    tkinter.Button(master, text="Reset",
+                   command=lambda : reset(entry_boxes,error_message,payout_message)
+                   ).grid(row=rows+1,column=columns-2)
+
     master.mainloop()
 
 #Creates an entry box
@@ -79,13 +87,14 @@ def check_scratchcard(entry_boxes,number_to_scratch):
 
 #Solve scratchcard for optimal line choice based on average expected payout. Takes the input
 #from the entry_boxes as an argument.    
-def scratchcard_solve(entry_boxes,rows,columns,number_to_scratch,payout_dict):
+def scratchcard_solve(payout_message,error_message,entry_boxes,rows,columns,number_to_scratch,payout_dict):
     
     revealed_values = check_scratchcard(entry_boxes,number_to_scratch)
     
     #If revealed_values returned an error message, print the error and exit scratchcard_solve
     if isinstance(revealed_values,str):
-        print(revealed_values)
+        clear_all(entry_boxes,error_message,payout_message)
+        error_message.set(revealed_values)
         return
     #Figure out which numbers are still unscratched by removing ones already revealed
     number_pool = list(range(1,10))
@@ -102,19 +111,21 @@ def scratchcard_solve(entry_boxes,rows,columns,number_to_scratch,payout_dict):
     diagonal_payouts = calc_line_payouts(diagonal_split,number_pool,payout_dict)
     #Find max expected value
     all_max = max([max(row_payouts),max(column_payouts),max(diagonal_payouts)])
-    #Identify the maximum expected value line and print it
+    #Identify the maximum expected value line call correct_boxes to highlight
+    #it green; Display expected, min, max payout
     if all_max == max(row_payouts):
-        print(row_split[row_payouts.index(max(row_payouts))])
-##        print("Expected Payout: "+str(max(row_payouts)[0]))
-##        print("Minimum Payout: "+str(max(row_payouts)[1]))
-##        print("Maximum Payout: "+str(max(row_payouts)[2]))
+        correct_boxes("row",row_payouts.index(max(row_payouts)),
+                      rows,columns,entry_boxes,error_message,payout_message)
+        payout_message.set("Expected Payout: "+str(max(row_payouts)[0])+
+        "\nMinimum Payout: "+str(max(row_payouts)[1])+
+        "\nMaximum Payout: "+str(max(row_payouts)[2]))
     elif all_max == max(column_payouts):
-        print(column_split[column_payouts.index(max(column_payouts))])
+        correct_boxes("column",column_payouts.index(max(column_payouts)),
+                      rows,columns,entry_boxes,error_message,payout_message)
     elif all_max == max(diagonal_payouts):
-        print(diagonal_split[diagonal_payouts.index(max(diagonal_payouts))])
+        correct_boxes("diagonal",diagonal_payouts.index(max(diagonal_payouts)),
+                      rows,columns,entry_boxes,error_message,payout_message)
     #Return the indexes of the numbers in the maximum value lines
-    correct_cells = [1,2,3]
-    return correct_cells
     
 
 #Split scratchcard into a list of rows
@@ -158,6 +169,44 @@ def calc_line_payouts(lines,number_pool,payout_dict):
     for line in line_payouts:
         output.append([statistics.mean(line),min(line),max(line)])
     return output
+
+#Given the line type (row, column, diagonal) and the index corresponding
+#to the maximum payout calculated for that line type, will highlight the
+#of the entry boxes corresponding to that line
+def correct_boxes(line_type, payout_index, rows, columns, entry_boxes,error_message,payout_message):
+    #Reset box backgrounds to white
+    clear_all(entry_boxes,error_message,payout_message)
+    #Highlight correct line green
+    if line_type == "row":
+        for i in range(payout_index*columns,(payout_index+1)*columns):
+            entry_boxes[i].config({"background":"#00FF00"})
+    elif line_type == "column":
+        for i in range(rows):
+            entry_boxes[payout_index+i*columns].config({"background":"#00FF00"})
+    elif line_type == "diagonal":
+        if payout_index == 0:
+            for i in range(rows):
+                entry_boxes[i*(columns+1)].config({"background":"#00FF00"})
+        elif payout_index == 1:
+            for i in range(rows):
+                entry_boxes[(i+1)*(columns-1)].config({"background":"#00FF00"})
+
+#Resets to initial state
+def reset(entry_boxes,error_message,payout_message):
+    clear_all(entry_boxes,error_message,payout_message)
+    #Deletes text in all entry boxes
+    for box in entry_boxes:
+        box.delete(0,"end")
+
+#Clears all messages and entry box colors
+def clear_all(entry_boxes,error_message,payout_message):
+    #Make entry box backgrounds white again
+    for box in entry_boxes:
+        box.config({"background":"#FFFFFF"})
+    #Reset messages    
+    error_message.set('')
+    payout_message.set('')
+    
 
 initialize(3,3,4,{6:10000,7:36,8:720,9:360,10:80,11:252,12:108,13:72,
                  14:54,15:180,16:72,17:180,18:119,19:36,20:306,21:1080,
