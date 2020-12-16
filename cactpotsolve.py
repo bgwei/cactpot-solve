@@ -9,8 +9,8 @@ import math
 import itertools
 import tkinter
 
-#TODO - make GUI messages prettier
 #TODO - restructure code with classes?
+#TODO - make GUI messages prettier?
 #TODO - compartmentalize functions more?
 #TODO - custom number_pool in initialize() - error if number pool is too small for grid
 #TODO - add numbers_repeat boolean to initialize(); would need to change number_pool to not
@@ -31,17 +31,18 @@ def initialize(rows,columns,number_to_scratch,payout_dict):
     #Create text message displays
     error_message = tkinter.StringVar()
     error_display = tkinter.Label(master, textvariable=error_message)
-    error_display.grid(row=rows+1,column=columns)
+    error_display.grid(row=rows+2,column=0,columnspan=3)
 
     payout_message = tkinter.StringVar()
     payout_display = tkinter.Label(master, textvariable=payout_message)
-    payout_display.grid(row=0,column=columns)
+    payout_display.grid(row=rows+3,column=0,rowspan=2,columnspan=2)
 
     #Create scratchcard grid
     entry_boxes = [create_entry_box(master,box_number) for box_number in range(0,rows*columns)]
     
     for box_number in range(len(entry_boxes)):
         entry_boxes[box_number].grid(row=math.floor(box_number/columns),column=box_number%columns)
+
     #Create buttons    
     tkinter.Button(master, text="Go!",
                    command=lambda : scratchcard_solve(payout_message,error_message,
