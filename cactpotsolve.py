@@ -9,16 +9,6 @@ import math
 import itertools
 import tkinter
 
-#TODO - restructure code with classes?
-#TODO - make GUI messages prettier?
-#TODO - compartmentalize functions more?
-#TODO - custom number_pool in initialize() - error if number pool is too small for grid
-#TODO - add numbers_repeat boolean to initialize(); would need to change number_pool to not
-#       remove items and check_scratchcard() to not check duplicates
-#TODO - error to catch if a possibility is not in payout dict given parameters?
-#TODO - make sure diag doesn't apply if rows != columns?
-#TODO - account for multiple lines of equal value?
-
 #Create table of text input boxes representing scratchcard spaces
 ##Scratchcard Parameters
 ##rows = number of rows in scratchcard
@@ -66,21 +56,22 @@ def create_entry_box(master,box_number):
 def check_scratchcard(entry_boxes,number_to_scratch):
     input_list = []
     scratch_count = 0
-    for box in entry_boxes:
-        if scratch_count > number_to_scratch:
-            return ("Error! You cannot input more than "+str(number_to_scratch)+" scratched numbers!")
+    for box in entry_boxes:        
         if box.get() == '':
             input_list.append(0)
         elif box.get().isdigit() and 1 <= int(box.get()) <= 9:
             if int(box.get()) in input_list:
-                return ("Error! You cannot scratch duplicates of the same number: "+box.get())
+                return ("Error! You cannot have duplicates of the same number: "+box.get())
             else:
                 input_list.append(int(box.get()))
                 scratch_count += 1
         else:
             return ("Error! "+box.get()+" is an invalid input! Make sure you entered the correct numbers!")
-        
-    if scratch_count < number_to_scratch:
+
+    #Check to see if appropriate number of values were entered
+    if scratch_count > number_to_scratch:
+        return ("Error! You cannot input more than "+str(number_to_scratch)+" scratched numbers!")
+    elif scratch_count < number_to_scratch:
         return ("Error! "+str(scratch_count)+" numbers detected! You need all "+str(number_to_scratch)+"!")
 
     return(input_list)
@@ -123,12 +114,16 @@ def scratchcard_solve(payout_message,error_message,entry_boxes,rows,columns,numb
     elif all_max == max(column_payouts):
         correct_boxes("column",column_payouts.index(max(column_payouts)),
                       rows,columns,entry_boxes,error_message,payout_message)
+        payout_message.set("Expected Payout: "+str(max(column_payouts)[0])+
+        "\nMinimum Payout: "+str(max(column_payouts)[1])+
+        "\nMaximum Payout: "+str(max(column_payouts)[2]))
     elif all_max == max(diagonal_payouts):
         correct_boxes("diagonal",diagonal_payouts.index(max(diagonal_payouts)),
                       rows,columns,entry_boxes,error_message,payout_message)
-    #Return the indexes of the numbers in the maximum value lines
+        payout_message.set("Expected Payout: "+str(max(diagonal_payouts)[0])+
+        "\nMinimum Payout: "+str(max(diagonal_payouts)[1])+
+        "\nMaximum Payout: "+str(max(diagonal_payouts)[2]))
     
-
 #Split scratchcard into a list of rows
 def row_splitter(revealed_values,columns,rows):
     return [revealed_values[i*columns:(i+1)*columns] for i in range(rows)]
